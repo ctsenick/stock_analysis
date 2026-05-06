@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>台股價值投資分析系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#111318;--ink2:#3d4550;--ink3:#7e8a99;
+  --bg:#f4f6fa;--surf:#fff;--border:#e3e8f0;
+  --blue:#1557c0;--blue2:#2d6fdb;--blue-pale:#eef3fc;
+  --teal:#076e5a;--teal2:#0f8f73;--teal-pale:#e3f5ef;
+  --gold:#9a6e00;--gold-pale:#fdf4dd;
+  --rose:#a0253c;--rose-pale:#fce9ed;
+  --amber:#875000;--amber-pale:#fef0d6;
+  --green:#1e6b18;--green-pale:#e5f5e2;
+  --purple:#4332b5;--purple-pale:#eeeaff;
+  --r:8px;--r2:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55;}
+
+.bar{position:fixed;top:0;left:0;right:0;z-index:500;height:52px;
+  background:var(--ink);display:flex;align-items:center;padding:0 18px;gap:14px;}
+.logo{font-family:'Noto Serif TC',serif;font-size:15px;font-weight:700;
+  color:#fff;display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.logo-gem{width:28px;height:28px;border-radius:7px;
+  background:linear-gradient(135deg,var(--blue2),var(--teal2));
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;}
+.bar-nav{display:flex;gap:2px;margin-left:auto;}
+.bn{font-size:12px;font-weight:500;padding:5px 12px;border-radius:6px;
+  border:none;background:none;color:rgba(255,255,255,.42);cursor:pointer;transition:all .13s;}
+.bn:hover{color:#fff;background:rgba(255,255,255,.09);}
+.bn.act{color:#fff;background:rgba(45,111,219,.38);}
+.bar-stat{display:flex;align-items:center;gap:5px;font-size:11px;
+  color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1);
+  border-radius:20px;padding:3px 10px;flex-shrink:0;margin-left:6px;white-space:nowrap;}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18);}
+.dot.on{background:#4ade80;}
+.dot.warn{background:#fbbf24;}
+.dot.err{background:#f87171;}
+
+.layout{display:flex;padding-top:52px;min-height:100vh;}
+.side{width:196px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--border);
+  position:fixed;top:52px;bottom:0;left:0;overflow-y:auto;padding:12px 0;}
+.sl{font-size:9.5px;font-weight:600;color:var(--ink3);letter-spacing:.12em;
+  text-transform:uppercase;padding:10px 13px 3px;}
+.si{display:flex;align-items:center;gap:8px;padding:7px 13px;
+  font-size:12.5px;color:var(--ink2);cursor:pointer;
+  border-left:2px solid transparent;transition:all .12s;}
+.si:hover{background:var(--blue-pale);color:var(--ink);}
+.si.act{background:var(--blue-pale);color:var(--blue);
+  border-left-color:var(--blue);font-weight:500;}
+.si .ic{font-size:12px;width:16px;text-align:center;opacity:.65;}
+.si.act .ic{opacity:1;}
+.si-bdg{margin-left:auto;font-size:9.5px;font-weight:600;
+  background:var(--ink);color:#fff;border-radius:10px;padding:1px 6px;}
+.sdiv{height:1px;background:var(--border);margin:6px 10px;}
+.main{flex:1;margin-left:196px;padding:20px;}
+
+.pg{display:none;}
+.pg.act{display:block;animation:fadeUp .18s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+.pt{font-family:'Noto Serif TC',serif;font-size:20px;font-weight:600;}
+.ps{font-size:11.5px;color:var(--ink3);margin-top:2px;}
+
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin-bottom:14px;}
+.mc{background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;}
+.mlbl{font-size:10.5px;color:var(--ink3);font-weight:500;margin-bottom:4px;}
+.mval{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:var(--ink);line-height:1;}
+.msub{font-size:10px;color:var(--ink3);margin-top:2px;}
+
+/* Sheets config */
+.config-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:16px;}
+.config-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fl{font-size:10.5px;font-weight:600;color:var(--ink3);letter-spacing:.04em;text-transform:uppercase;}
+.fi{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 11px;
+  border:1px solid var(--border);border-radius:var(--r);background:var(--surf);
+  color:var(--ink);outline:none;width:100%;transition:border-color .13s;}
+.fi:focus{border-color:var(--blue2);}
+.btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.btn{font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:600;
+  padding:7px 15px;border-radius:var(--r);border:none;cursor:pointer;transition:all .13s;
+  display:inline-flex;align-items:center;gap:5px;}
+.btn-dark{background:var(--ink);color:#fff;} .btn-dark:hover{background:#1e2836;}
+.btn-out{background:var(--surf);color:var(--ink2);border:1px solid var(--border);}
+.btn-out:hover{border-color:var(--blue2);color:var(--blue);}
+.btn-teal{background:var(--teal);color:#fff;} .btn-teal:hover{opacity:.88;}
+.btn-sm{font-size:11px;padding:5px 11px;}
+.conn-status{font-size:12px;color:var(--ink3);}
+.conn-status.ok{color:var(--teal);}
+.conn-status.err{color:var(--rose);}
+
+.guide-box{background:linear-gradient(135deg,#f0f4ff,#e8f5ef);
+  border:1px solid #c8d8f8;border-radius:var(--r2);padding:14px 16px;margin-bottom:14px;}
+.guide-title{font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px;}
+.guide-steps{display:flex;flex-direction:column;gap:6px;}
+.gs-row{display:flex;gap:9px;align-items:flex-start;}
+.gs-n{width:20px;height:20px;border-radius:50%;background:var(--blue);color:#fff;
+  font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.gs-txt{font-size:12px;color:var(--ink2);line-height:1.55;}
+
+/* Slider panel */
+.sp{background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:13px 15px;margin-bottom:12px;}
+.sp-top{display:flex;align-items:center;margin-bottom:11px;}
+.sp-title{font-size:10.5px;font-weight:600;color:var(--ink2);letter-spacing:.06em;text-transform:uppercase;}
+.sp-reset{margin-left:auto;font-size:11px;padding:3px 9px;border-radius:5px;
+  border:1px solid var(--border);background:none;color:var(--ink3);cursor:pointer;transition:all .12s;}
+.sp-reset:hover{background:var(--bg);}
+.sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:13px;}
+.sl-hd{display:flex;justify-content:space-between;margin-bottom:4px;}
+.sl-name{font-size:11.5px;color:var(--ink2);}
+.sl-val{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:var(--blue);}
+input[type=range]{width:100%;height:3px;accent-color:var(--blue2);cursor:pointer;}
+
+/* Filter bar */
+.fbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:11px;}
+.fb{font-size:11.5px;font-weight:500;padding:5px 12px;border-radius:14px;
+  border:1px solid var(--border);background:var(--surf);color:var(--ink2);cursor:pointer;transition:all .12s;}
+.fb:hover{border-color:var(--blue2);color:var(--blue);}
+.fb.act{background:var(--ink);color:#fff;border-color:var(--ink);}
+.srch{flex:1;min-width:140px;max-width:200px;
+  font-family:'Outfit',sans-serif;font-size:12.5px;padding:6px 10px;
+  border:1px solid var(--border);border-radius:var(--r);
+  background:var(--surf);color:var(--ink);outline:none;}
+.srch:focus{border-color:var(--blue2);}
+.cnt-chip{margin-left:auto;font-size:11px;color:var(--ink3);
+  background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:3px 10px;}
+
+/* Date range selector */
+.date-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;
+  background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;}
+.dr-label{font-size:12px;font-weight:500;color:var(--ink2);}
+.dr-btn{font-size:11px;padding:4px 10px;border-radius:14px;
+  border:1px solid var(--border);background:var(--bg);color:var(--ink2);cursor:pointer;transition:all .12s;}
+.dr-btn:hover{border-color:var(--blue2);color:var(--blue);}
+.dr-btn.act{background:var(--blue);color:#fff;border-color:var(--blue);}
+.dr-custom{display:flex;gap:6px;align-items:center;margin-left:auto;}
+.dr-input{font-size:11px;padding:4px 8px;border:1px solid var(--border);
+  border-radius:6px;background:var(--surf);outline:none;}
+.dr-input:focus{border-color:var(--blue2);}
+
+/* Table */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r2);background:var(--surf);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead tr{background:var(--ink);}
+th{padding:9px 9px;text-align:left;white-space:nowrap;font-size:9px;font-weight:600;
+  color:rgba(255,255,255,.45);letter-spacing:.09em;text-transform:uppercase;cursor:pointer;user-select:none;}
+th:hover{color:rgba(255,255,255,.82);}
+td{padding:9px 9px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:rgba(20,87,192,.025);}
+.tr-gold td{background:#fffdf0;} .tr-gold:hover td{background:#fff8e0;}
+.tr-new td{background:#f0fdf5;}
+
+.rk{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:center;color:var(--ink3);}
+.rk.r1{color:#b5850a;} .rk.r2{color:#6b7b8d;} .rk.r3{color:#8a5a28;}
+.cd{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink3);}
+.nm{font-weight:600;color:var(--ink);}
+.new-tag{font-size:8.5px;font-weight:700;background:#dcfce7;color:#166534;padding:1px 5px;border-radius:4px;margin-left:4px;}
+
+.bdg{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;}
+.b-tl{background:var(--teal-pale);color:var(--teal);}
+.b-pu{background:var(--purple-pale);color:var(--purple);}
+.b-bl{background:var(--blue-pale);color:var(--blue);}
+.b-ro{background:var(--rose-pale);color:var(--rose);}
+.b-am{background:var(--amber-pale);color:var(--amber);}
+.b-gr{background:var(--green-pale);color:var(--green);}
+
+.sbar{display:flex;align-items:center;gap:6px;}
+.strack{width:52px;height:3px;border-radius:2px;background:var(--border);overflow:hidden;flex-shrink:0;}
+.sfill{height:100%;border-radius:2px;}
+.snum{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;white-space:nowrap;}
+.gs{width:19px;height:19px;border-radius:3px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.hi{background:var(--green-pale);color:var(--green);}
+.mi{background:var(--blue-pale);color:var(--blue);}
+.lo{background:var(--amber-pale);color:var(--amber);}
+
+.dl{font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;padding:1px 4px;border-radius:3px;}
+.du{background:var(--teal-pale);color:var(--teal);}
+.dd{background:var(--rose-pale);color:var(--rose);}
+.de{background:var(--bg);color:var(--ink3);}
+
+.ssel{font-size:9.5px;font-weight:600;border:none;border-radius:10px;padding:2px 7px;cursor:pointer;outline:none;font-family:'Outfit',sans-serif;}
+.sh{background:var(--teal-pale);color:var(--teal);}
+.sw{background:var(--amber-pale);color:var(--amber);}
+.sb2{background:var(--blue-pale);color:var(--blue);}
+.sn2{background:var(--bg);color:var(--ink3);}
+.sk{background:var(--rose-pale);color:var(--rose);}
+
+/* Loading */
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(17,19,24,.55);
+  z-index:800;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+.loading-overlay.show{display:flex;}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);
+  border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13px;color:rgba(255,255,255,.8);font-weight:500;}
+
+/* Dist */
+.drow{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.dlbl{font-size:11px;color:var(--ink2);width:60px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dtrack{flex:1;height:4px;border-radius:2px;background:var(--border);overflow:hidden;}
+.dfill{height:100%;border-radius:2px;}
+.dcnt{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink3);width:28px;text-align:right;}
+
+.card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r2);padding:13px 15px;margin-bottom:12px;}
+.card-t{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:9px;display:flex;align-items:center;gap:6px;}
+
+.htabs{display:flex;gap:4px;margin-bottom:11px;}
+.ht{font-size:12px;font-weight:500;padding:5px 13px;border-radius:6px;border:1px solid var(--border);background:var(--surf);color:var(--ink2);cursor:pointer;transition:all .12s;}
+.ht.act{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+.empty{display:flex;flex-direction:column;align-items:center;padding:2.5rem 1rem;color:var(--ink3);text-align:center;}
+.ei{font-size:36px;margin-bottom:10px;opacity:.28;}
+
+.wr-results{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;max-height:150px;overflow-y:auto;}
+.wrc{font-size:11.5px;padding:5px 10px;border-radius:14px;border:1px solid var(--border);
+  background:var(--surf);color:var(--ink2);cursor:pointer;transition:all .12px;display:flex;align-items:center;gap:5px;}
+.wrc:hover{background:var(--teal-pale);border-color:var(--teal);color:var(--teal);}
+
+.toast{position:fixed;bottom:20px;right:20px;z-index:999;
+  background:var(--ink);color:#fff;font-size:12.5px;font-weight:500;
+  padding:9px 15px;border-radius:var(--r);
+  opacity:0;transform:translateY(5px);transition:all .18s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+
+@media(max-width:768px){.side{display:none;}.main{margin-left:0;padding:12px;}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="logo"><div class="logo-gem">值</div>台股價值投資分析系統</div>
+  <nav class="bar-nav">
+    <button class="bn act" onclick="nav('home')">首頁</button>
+    <button class="bn" onclick="nav('screener')">選股篩選</button>
+    <button class="bn" onclick="nav('top30')">前30名</button>
+    <button class="bn" onclick="nav('watchlist')">追蹤清單</button>
+    <button class="bn" onclick="nav('history')">歷史比較</button>
+    <button class="bn" onclick="nav('config')">⚙ 設定</button>
+  </nav>
+  <div class="bar-stat">
+    <div class="dot" id="dot"></div>
+    <span id="stat-txt">未連線</span>
+  </div>
+</header>
+
+<div class="layout">
+<aside class="side">
+  <div class="sl">主選單</div>
+  <div class="si act" onclick="nav('home')"><span class="ic">⌂</span>首頁</div>
+  <div class="si" onclick="nav('screener')"><span class="ic">⊞</span>選股篩選<span class="si-bdg" id="sb-cnt">0</span></div>
+  <div class="si" onclick="nav('top30')"><span class="ic">★</span>前30名</div>
+  <div class="si" onclick="nav('watchlist')"><span class="ic">◎</span>追蹤清單</div>
+  <div class="si" onclick="nav('history')"><span class="ic">⟳</span>歷史比較</div>
+  <div class="si" onclick="nav('config')"><span class="ic">⚙</span>設定 Sheets</div>
+  <div class="sdiv"></div>
+  <div class="sl">產業篩選</div>
+  <div class="si" onclick="setInd('全部')"><span class="ic">·</span>全部</div>
+  <div class="si" onclick="setInd('資訊科技')"><span class="ic">·</span>資訊科技</div>
+  <div class="si" onclick="setInd('工業製造')"><span class="ic">·</span>工業製造</div>
+  <div class="si" onclick="setInd('民生消費')"><span class="ic">·</span>民生消費</div>
+  <div class="si" onclick="setInd('金融保險')"><span class="ic">·</span>金融保險</div>
+  <div class="si" onclick="setInd('特用材料')"><span class="ic">·</span>特用材料</div>
+  <div class="si" onclick="setInd('醫療生技')"><span class="ic">·</span>醫療生技</div>
+  <div class="si" onclick="setInd('利基產業')"><span class="ic">·</span>利基產業</div>
+  <div class="sdiv"></div>
+  <div class="sl">護城河</div>
+  <div class="si" onclick="setMoat('利基壟斷')"><span class="ic">◆</span>利基壟斷</div>
+  <div class="si" onclick="setMoat('轉換成本')"><span class="ic">◆</span>轉換成本</div>
+  <div class="si" onclick="setMoat('品牌溢價')"><span class="ic">◆</span>品牌溢價</div>
+  <div class="si" onclick="setMoat('法規保護')"><span class="ic">◆</span>法規保護</div>
+  <div class="si" onclick="setMoat('網路效應')"><span class="ic">◆</span>網路效應</div>
+  <div class="si" onclick="setMoat('成本優勢')"><span class="ic">◆</span>成本優勢</div>
+</aside>
+
+<main class="main">
+
+<!-- ══ HOME ══ -->
+<div id="pg-home" class="pg act">
+  <div class="ph">
+    <div><div class="pt">投資組合總覽</div>
+    <div class="ps" id="home-desc">從 Google Sheets 讀取最新資料</div></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-out btn-sm" onclick="syncSheets()">↻ 從 Sheets 同步</button>
+      <button class="btn btn-dark btn-sm" onclick="nav('config')">⚙ 設定 Sheets</button>
+    </div>
+  </div>
+
+  <div class="mgrid">
+    <div class="mc"><div class="mlbl">Sheets股票數</div><div class="mval" id="m-total">—</div><div class="msub">所有交易日</div></div>
+    <div class="mc"><div class="mlbl">最新日期</div><div class="mval" id="m-date" style="font-size:13px;padding-top:3px;">—</div></div>
+    <div class="mc"><div class="mlbl">完整評分</div><div class="mval" id="m-scored" style="color:var(--blue)">—</div><div class="msub">有財務資料</div></div>
+    <div class="mc"><div class="mlbl">歷史天數</div><div class="mval" id="m-days" style="color:var(--teal)">—</div><div class="msub">交易日快照</div></div>
+    <div class="mc"><div class="mlbl">財務庫</div><div class="mval" id="m-fin">115</div><div class="msub">檔已內建</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="card"><div class="card-t">護城河分佈（前30名）</div><div id="moat-dist"><div class="empty"><div class="ei">◆</div><div style="font-size:12px">同步後顯示</div></div></div></div>
+    <div class="card"><div class="card-t">產業分佈（前30名）</div><div id="ind-dist"><div class="empty"><div class="ei">◈</div><div style="font-size:12px">同步後顯示</div></div></div></div>
+  </div>
+</div>
+
+<!-- ══ SCREENER ══ -->
+<div id="pg-screener" class="pg">
+  <div class="ph">
+    <div><div class="pt">選股篩選</div>
+    <div class="ps" id="scr-desc">從 Google Sheets 即時讀取</div></div>
+    <button class="btn btn-out btn-sm" onclick="doExport()">↓ 匯出Excel</button>
+  </div>
+
+  <!-- Date range -->
+  <div class="date-row">
+    <span class="dr-label">查詢日期：</span>
+    <button class="dr-btn act" data-dr="latest" onclick="setDR(this,'latest')">最新一日</button>
+    <button class="dr-btn" data-dr="week" onclick="setDR(this,'week')">近一週平均</button>
+    <button class="dr-btn" data-dr="month" onclick="setDR(this,'month')">近一月平均</button>
+    <div class="dr-custom">
+      <input type="date" class="dr-input" id="dr-from" placeholder="從">
+      <span style="font-size:11px;color:var(--ink3)">至</span>
+      <input type="date" class="dr-input" id="dr-to" placeholder="至">
+      <button class="btn btn-out btn-sm" onclick="setDR(null,'custom')">查詢</button>
+    </div>
+  </div>
+
+  <div class="sp">
+    <div class="sp-top">
+      <span class="sp-title">篩選門檻</span>
+      <button class="sp-reset" onclick="resetSliders()">重置</button>
+    </div>
+    <div class="sliders">
+      <div><div class="sl-hd"><span class="sl-name">⭐ 總分</span><span class="sl-val" id="v-tot">不限</span></div><input type="range" min="0" max="100" value="0" id="s-tot" oninput="onSl('tot',this.value)"></div>
+      <div><div class="sl-hd"><span class="sl-name">毛利率 ≥</span><span class="sl-val" id="v-gm">不限</span></div><input type="range" min="0" max="60" value="0" id="s-gm" oninput="onSl('gm',this.value)"></div>
+      <div><div class="sl-hd"><span class="sl-name">ROE ≥</span><span class="sl-val" id="v-roe">不限</span></div><input type="range" min="0" max="30" value="0" id="s-roe" oninput="onSl('roe',this.value)"></div>
+      <div><div class="sl-hd"><span class="sl-name">本益比 ≤</span><span class="sl-val" id="v-pe">不限</span></div><input type="range" min="5" max="60" value="60" id="s-pe" oninput="onSl('pe',this.value,true)"></div>
+      <div><div class="sl-hd"><span class="sl-name">殖利率 ≥</span><span class="sl-val" id="v-yld">不限</span></div><input type="range" min="0" max="10" step="0.5" value="0" id="s-yld" oninput="onSl('yld',this.value)"></div>
+      <div><div class="sl-hd"><span class="sl-name">負債比 ≤</span><span class="sl-val" id="v-dbt">不限</span></div><input type="range" min="10" max="80" value="80" id="s-dbt" oninput="onSl('dbt',this.value,true)"></div>
+    </div>
+  </div>
+
+  <div class="fbar">
+    <button class="fb act" data-ind="全部" onclick="setFB(this,'ind','全部')">全部</button>
+    <button class="fb" data-ind="資訊科技" onclick="setFB(this,'ind','資訊科技')">資訊科技</button>
+    <button class="fb" data-ind="工業製造" onclick="setFB(this,'ind','工業製造')">工業製造</button>
+    <button class="fb" data-ind="民生消費" onclick="setFB(this,'ind','民生消費')">民生消費</button>
+    <button class="fb" data-ind="金融保險" onclick="setFB(this,'ind','金融保險')">金融保險</button>
+    <button class="fb" data-ind="特用材料" onclick="setFB(this,'ind','特用材料')">特用材料</button>
+    <button class="fb" data-ind="醫療生技" onclick="setFB(this,'ind','醫療生技')">醫療生技</button>
+    <button class="fb" data-ind="利基產業" onclick="setFB(this,'ind','利基產業')">利基產業</button>
+    <input class="srch" id="srch" placeholder="搜尋代號、名稱…" oninput="S.q=this.value;renderScr()">
+    <span class="cnt-chip" id="cnt-chip">0 檔</span>
+  </div>
+
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th onclick="sortBy('rank')">排名</th><th>代號</th><th>公司</th><th>產業</th><th>護城河</th>
+        <th onclick="sortBy('g1')">G1</th><th onclick="sortBy('g2')">G2</th>
+        <th onclick="sortBy('g3')">G3</th><th onclick="sortBy('g4')">G4</th><th onclick="sortBy('g5')">G5</th>
+        <th onclick="sortBy('total')">總分</th>
+        <th onclick="sortBy('pe')">本益比</th><th onclick="sortBy('yield_')">殖利率%</th>
+        <th onclick="sortBy('price')">收盤價</th><th>較上期</th><th>狀態</th>
+      </tr></thead>
+      <tbody id="scr-body"><tr><td colspan="16" style="text-align:center;padding:2rem;color:var(--ink3);font-size:13px;">請先設定 Google Sheets 連線</td></tr></tbody>
+    </table>
+  </div>
+  <div style="font-size:11px;color:var(--ink3);margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;" id="scr-foot"></div>
+</div>
+
+<!-- ══ TOP30 ══ -->
+<div id="pg-top30" class="pg">
+  <div class="ph">
+    <div><div class="pt">前30名聚焦清單</div><div class="ps" id="t30-desc">五關總分動態排列</div></div>
+    <button class="btn btn-out btn-sm" onclick="doExport()">↓ 匯出Excel</button>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th>排名</th><th>代號</th><th>公司</th><th>產業</th><th>護城河</th>
+        <th>G1</th><th>G2</th><th>G3</th><th>G4</th><th>G5</th>
+        <th>總分</th><th>本益比</th><th>殖利率%</th><th>收盤價</th><th>較上期</th><th>狀態</th>
+      </tr></thead>
+      <tbody id="t30-body"><tr><td colspan="16" style="text-align:center;padding:2rem;color:var(--ink3)">請先設定 Google Sheets 連線</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ WATCHLIST ══ -->
+<div id="pg-watchlist" class="pg">
+  <div class="ph"><div><div class="pt">追蹤清單</div><div class="ps">持有中 · 觀察中 · 考慮買入</div></div></div>
+  <div class="fbar">
+    <button class="fb act" data-wf="全部" onclick="setWF(this,'全部')">全部</button>
+    <button class="fb" data-wf="持有中" onclick="setWF(this,'持有中')">持有中</button>
+    <button class="fb" data-wf="觀察中" onclick="setWF(this,'觀察中')">觀察中</button>
+    <button class="fb" data-wf="考慮買入" onclick="setWF(this,'考慮買入')">考慮買入</button>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th>代號</th><th>公司</th><th>產業</th><th>護城河</th>
+        <th>總分</th><th>本益比</th><th>殖利率%</th><th>收盤價</th><th>狀態</th><th>操作</th>
+      </tr></thead>
+      <tbody id="wl-body"></tbody>
+    </table>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <div class="card-t">快速加入追蹤</div>
+    <input class="srch" style="max-width:none;width:100%;" id="wl-srch"
+      placeholder="輸入代號或公司名稱…" oninput="renderWSearch(this.value)">
+    <div class="wr-results" id="wr-res"></div>
+  </div>
+</div>
+
+<!-- ══ HISTORY ══ -->
+<div id="pg-history" class="pg">
+  <div class="ph"><div><div class="pt">歷史比較</div><div class="ps">查詢任意日期的前30名排行</div></div></div>
+  <div class="htabs">
+    <button class="ht act" data-hp="d" onclick="setHP(this,'d')">今日 vs 昨日</button>
+    <button class="ht" data-hp="w" onclick="setHP(this,'w')">今日 vs 上週</button>
+    <button class="ht" data-hp="m" onclick="setHP(this,'m')">今日 vs 上月</button>
+  </div>
+  <div id="hist-body"></div>
+</div>
+
+<!-- ══ CONFIG ══ -->
+<div id="pg-config" class="pg">
+  <div class="ph">
+    <div><div class="pt">設定 Google Sheets 連線</div>
+    <div class="ps">設定一次，之後資料自動從 Sheets 讀取</div></div>
+  </div>
+
+  <div class="guide-box">
+    <div class="guide-title">📋 第一次使用步驟</div>
+    <div class="guide-steps">
+      <div class="gs-row"><div class="gs-n">1</div>
+        <div class="gs-txt">建立 Google Sheets：<span class="url-pill" style="display:inline;padding:1px 6px;" onclick="window.open('https://sheets.new')">sheets.new</span>，取名「台股每日資料庫」</div>
+      </div>
+      <div class="gs-row"><div class="gs-n">2</div>
+        <div class="gs-txt">新增兩個工作表：<strong>DailyData</strong>（每日資料）和 <strong>FinDB</strong>（財務庫，選用）<br>
+            <span style="color:var(--rose);font-weight:600">⚠ 注意：工作表名稱大小寫必須完全一致</span></div>
+      </div>
+      <div class="gs-row"><div class="gs-n">3</div>
+        <div class="gs-txt">DailyData 第1列貼上標題：<code style="font-size:10px;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">日期 代號 名稱 收盤價 殖利率(%) 本益比 股價淨值比</code>（Tab分隔）</div>
+      </div>
+      <div class="gs-row"><div class="gs-n">4</div>
+        <div class="gs-txt">右上角「共用」→「知道連結的人」→「檢視者」→ 確認</div>
+      </div>
+      <div class="gs-row"><div class="gs-n">5</div>
+        <div class="gs-txt" style="color:var(--blue);font-weight:500">【重要】「檔案」→「發布到網路」→ 選「DailyData」工作表 → 選「逗號分隔值(.csv)」→「發布」<br><span style="font-size:11px;color:var(--ink3);font-weight:400">這步是讓網頁能讀取資料的關鍵，少做就會連線失敗</span></div>
+      </div>
+      <div class="gs-row"><div class="gs-n">6</div>
+        <div class="gs-txt">把 Sheets ID 貼到下方設定，按「儲存並連線」</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="config-card">
+    <div class="config-title">🔧 連線設定</div>
+    <div class="config-grid">
+      <div class="fg" style="grid-column:1/-1;">
+        <div class="fl">Google Sheets 連結（推薦貼 pubhtml 連結）</div>
+        <input class="fi" id="cfg-id" placeholder="貼上 pubhtml 連結 或 edit 連結 或 Sheets ID">
+        <div style="font-size:10.5px;color:var(--ink3);margin-top:4px;">
+          可以貼以下任一種：<br>① pubhtml 連結（推薦）：.../pub?output=csv 那種<br>② edit 連結：docs.google.com/spreadsheets/d/.../edit<br>③ 純 ID 字串
+        </div>
+      </div>
+      <div class="fg">
+        <div class="fl">每日資料工作表名稱</div>
+        <input class="fi" id="cfg-sheet" value="DailyData" placeholder="DailyData">
+      </div>
+      <div class="fg">
+        <div class="fl">財務庫工作表名稱（選填）</div>
+        <input class="fi" id="cfg-fin" value="FinDB" placeholder="FinDB">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-dark" onclick="saveConfig()">💾 儲存並連線</button>
+      <button class="btn btn-teal" onclick="syncSheets()">↻ 立即同步</button>
+      <button class="btn btn-out" onclick="testSheets()">🔍 診斷連線</button>
+      <button class="btn btn-out" onclick="clearAll()">清除資料</button>
+    </div>
+    <div style="margin-top:8px;" id="conn-status" class="conn-status"></div>
+    <div style="margin-top:10px;padding:10px;background:var(--blue-pale);border-radius:var(--r);font-size:11.5px;color:var(--blue);">
+      💡 <strong>快速設定</strong>：把你的 pubhtml 連結直接貼到上方輸入框，系統自動抓取正確格式
+      <br><button class="btn btn-out btn-sm" style="margin-top:6px;" onclick="autofillKnown()">一鍵填入你的 Sheets 連結</button>
+    </div>
+  </div>
+
+  <div class="config-card">
+    <div class="config-title">📅 Sheets 資料說明</div>
+    <div style="font-size:12px;color:var(--ink2);line-height:1.8;">
+      <strong>DailyData 工作表格式</strong>（每天用「CSV轉換工具」貼入）：<br>
+      A=日期、B=代號、C=名稱、D=收盤價、E=殖利率(%)、F=本益比、G=股價淨值比<br><br>
+      <strong>歷史資料建立建議</strong>：<br>
+      • 下載各月底的CSV，用轉換工具轉換後依序貼入，一年只需約12筆<br>
+      • 指定日期下載：<code style="font-size:10px;background:var(--bg);padding:1px 4px;border-radius:3px;">https://www.twse.com.tw/rwd/zh/afterTrading/BWIBBU_d?date=<strong>YYYYMMDD</strong>&response=csv</code><br>
+      • 系統自動識別 Sheets 裡所有不同日期，建立歷史快照
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-txt" id="loading-txt">從 Google Sheets 讀取資料…</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════
+// EMBEDDED FINANCIAL DATABASE (115 stocks)
+// ════════════════════════════════════════════
+const FIN_ROWS = [
+["2330","台積電","資訊科技","晶圓代工","利基壟斷",26.8,53.1,23.8,1,10,1,1,85,1],
+["3008","大立光","資訊科技","光學元件","利基壟斷",18.5,50.2,9.1,1,8,1,1,95,1],
+["2395","研華","資訊科技","工業電腦","轉換成本",17.8,42.3,27.5,1,15,1,1,70,1],
+["6719","力旺","資訊科技","半導體IP","利基壟斷",25.8,95.1,8.2,1,8,1,1,90,1],
+["3443","創意","資訊科技","IC設計","利基壟斷",22.5,52.8,18.5,1,8,1,1,95,1],
+["3661","世芯-KY","資訊科技","ASIC設計","利基壟斷",22.5,48.2,12.8,1,5,1,1,100,1],
+["8299","群聯","資訊科技","儲存控制IC","利基壟斷",18.5,42.1,24.8,1,12,1,1,95,1],
+["3034","聯詠","資訊科技","驅動IC","利基壟斷",16.2,38.5,22.4,1,10,1,1,90,1],
+["2454","聯發科","資訊科技","手機晶片","轉換成本",18.8,48.2,28.5,1,12,1,1,95,1],
+["2379","瑞昱","資訊科技","網路晶片","利基壟斷",15.8,42.5,18.2,1,12,1,1,90,1],
+["5269","祥碩","資訊科技","介面IC","利基壟斷",18.2,48.5,12.5,1,8,1,1,95,1],
+["6415","矽力-KY","資訊科技","電源管理IC","利基壟斷",22.5,52.8,15.2,1,6,1,1,85,1],
+["4966","譜瑞-KY","資訊科技","顯示介面IC","利基壟斷",20.5,55.2,10.8,1,8,1,1,90,1],
+["3227","原相","資訊科技","感測器IC","利基壟斷",18.8,45.2,15.8,1,10,1,1,95,1],
+["6462","神盾","資訊科技","指紋IC","利基壟斷",16.5,42.8,18.5,1,6,1,1,90,1],
+["3530","晶相光","資訊科技","影像感測IC","利基壟斷",14.8,38.5,22.4,1,5,1,1,85,1],
+["4919","新唐","資訊科技","MCU","利基壟斷",12.8,32.5,25.8,1,8,1,1,70,1],
+["2337","旺宏","資訊科技","NOR Flash","利基壟斷",14.5,35.8,28.5,1,8,1,1,80,1],
+["2344","華邦電","資訊科技","低功耗DRAM","利基壟斷",12.5,28.5,35.2,1,6,1,1,85,1],
+["3035","智原","資訊科技","ASIC平台","利基壟斷",18.5,50.2,15.8,1,8,1,1,90,1],
+["3515","華擎","資訊科技","工業主機板","品牌溢價",10.5,25.8,28.5,1,8,1,0,60,0],
+["3005","神基","資訊科技","強固型筆電","品牌溢價",12.8,32.5,25.8,1,10,1,1,75,1],
+["6277","宏正","資訊科技","KVM設備","利基壟斷",14.5,42.5,18.2,1,10,1,1,80,1],
+["3706","神達","資訊科技","車用資通訊","轉換成本",8.2,22.5,32.5,1,6,1,1,70,1],
+["6285","啟碁","資訊科技","網通ODM","轉換成本",10.8,22.5,35.8,1,8,1,1,90,1],
+["2382","廣達","資訊科技","AI伺服器","轉換成本",12.5,8.5,55.8,1,12,1,1,85,1],
+["2356","英業達","資訊科技","伺服器","轉換成本",10.5,7.5,58.5,1,10,1,1,80,1],
+["2317","鴻海","資訊科技","EMS代工","成本優勢",10.2,6.2,62.5,1,15,1,1,85,0],
+["2303","聯電","資訊科技","晶圓代工","轉換成本",12.5,28.5,35.8,1,10,1,1,85,1],
+["2408","南亞科","資訊科技","DRAM","利基壟斷",12.5,28.5,38.5,1,8,1,1,85,1],
+["2049","上銀","工業製造","精密機械","利基壟斷",14.8,38.5,30.2,1,12,1,1,75,1],
+["1590","亞德客","工業製造","氣動元件","利基壟斷",16.2,44.1,19.8,1,10,1,1,60,1],
+["8069","元太","工業製造","電子紙","利基壟斷",18.5,41.2,15.3,1,7,1,1,90,1],
+["2308","台達電","工業製造","電源元件","轉換成本",16.8,32.5,35.2,1,20,1,1,80,1],
+["9921","巨大","工業製造","自行車","品牌溢價",12.8,23.4,41.5,1,18,1,1,85,1],
+["9914","美利達","工業製造","自行車","品牌溢價",13.2,24.1,38.8,1,15,1,1,80,1],
+["1476","儒鴻","工業製造","機能布料","轉換成本",15.5,30.2,28.4,1,12,1,1,95,1],
+["2059","川湖","工業製造","精密零件","利基壟斷",18.2,43.5,12.4,1,10,1,1,85,1],
+["6488","環球晶","工業製造","矽晶圓","利基壟斷",15.8,37.2,42.1,1,5,1,1,90,1],
+["3711","日月光投控","工業製造","封測","轉換成本",14.2,22.8,48.5,1,15,1,1,80,1],
+["1560","中砂","工業製造","精密材料","利基壟斷",14.5,35.8,22.4,1,12,1,1,40,1],
+["2360","致茂","工業製造","測試設備","利基壟斷",16.8,38.4,18.5,1,10,1,1,70,1],
+["3665","貿聯-KY","工業製造","連接器","轉換成本",15.8,28.4,35.8,1,8,1,1,90,1],
+["3017","奇鋐","工業製造","散熱","轉換成本",14.8,32.5,28.5,1,8,1,1,70,1],
+["3324","雙鴻","工業製造","均熱板","轉換成本",12.8,30.5,32.5,1,6,1,1,75,1],
+["6669","緯穎","工業製造","AI伺服器","轉換成本",14.5,18.5,42.5,1,5,1,1,95,1],
+["2474","可成","工業製造","金屬機殼","轉換成本",12.5,28.5,25.8,1,8,1,1,80,1],
+["4938","和碩","工業製造","iPhone代工","轉換成本",8.5,6.5,55.8,1,8,1,1,95,1],
+["9904","寶成","工業製造","運動鞋代工","轉換成本",10.5,22.5,38.5,1,15,1,1,85,1],
+["1477","聚陽","工業製造","成衣","轉換成本",12.5,28.5,28.5,1,10,1,1,90,1],
+["3533","嘉澤","工業製造","高速連接器","轉換成本",15.5,38.5,18.5,1,6,1,1,85,1],
+["3037","欣興","工業製造","ABF載板","轉換成本",14.5,32.5,42.5,1,8,1,1,80,1],
+["5222","全訊","工業製造","RF元件","利基壟斷",14.5,42.5,18.5,1,8,1,1,85,1],
+["2345","智邦","工業製造","網路交換器","轉換成本",12.5,28.5,28.5,1,8,1,1,85,1],
+["2231","為升","工業製造","RFID","利基壟斷",14.5,38.5,18.5,1,8,1,1,70,1],
+["2015","豐興","工業製造","鋼鐵","成本優勢",10.5,18.5,32.5,1,10,1,0,20,0],
+["2002","中鋼","工業製造","鋼鐵","成本優勢",8.5,12.5,48.5,1,15,1,0,20,0],
+["1101","台泥","工業製造","水泥","成本優勢",8.5,18.5,52.5,1,15,1,0,15,1],
+["1102","亞泥","工業製造","水泥","成本優勢",8.5,18.5,48.5,1,15,1,0,20,0],
+["2105","正新","工業製造","輪胎","品牌溢價",10.5,22.5,38.5,1,10,1,0,50,1],
+["1504","東元","工業製造","馬達家電","品牌溢價",8.5,18.5,42.5,1,12,1,0,35,0],
+["2912","統一超","民生消費","便利商店","網路效應",25.2,32.5,55.8,1,20,1,0,5,0],
+["2412","中華電","民生消費","電信","法規保護",12.8,28.4,31.2,1,25,1,0,2,1],
+["5903","全家","民生消費","便利商店","網路效應",18.5,28.5,58.5,1,15,1,0,5,0],
+["4904","遠傳","民生消費","電信","法規保護",12.1,26.8,38.4,1,15,1,0,0,1],
+["3045","台灣大","民生消費","電信","法規保護",10.8,24.5,42.5,1,18,1,0,0,1],
+["2207","和泰車","民生消費","汽車代理","品牌溢價",14.5,18.5,42.8,1,20,1,0,0,0],
+["1216","統一","民生消費","食品飲料","品牌溢價",12.5,28.5,45.8,1,15,1,0,15,0],
+["1210","大成","民生消費","飼料食品","品牌溢價",10.5,22.5,42.5,1,12,1,0,30,0],
+["1227","佳格","民生消費","健康食品","品牌溢價",12.5,35.5,28.5,1,15,1,0,20,0],
+["1234","黑松","民生消費","飲料","品牌溢價",8.5,22.5,32.5,1,20,1,0,5,0],
+["2727","王品","民生消費","餐飲","品牌溢價",10.5,22.5,42.5,1,10,1,0,10,0],
+["2729","瓦城","民生消費","餐飲","品牌溢價",12.5,28.5,35.5,1,8,1,0,5,0],
+["2753","八方雲集","民生消費","餐飲加盟","品牌溢價",14.5,32.5,25.8,1,8,1,0,5,0],
+["2882","國泰金","金融保險","壽險","法規保護",12.5,0,0,1,15,1,0,5,0],
+["2881","富邦金","金融保險","金控","法規保護",13.5,0,0,1,15,1,0,10,0],
+["2886","兆豐金","金融保險","銀行","法規保護",12.5,0,0,1,20,1,0,15,0],
+["2884","玉山金","金融保險","銀行","法規保護",12.5,0,0,1,12,1,0,10,1],
+["2891","中信金","金融保險","金控","法規保護",12.5,0,0,1,12,1,0,15,0],
+["2880","華南金","金融保險","銀行","法規保護",10.5,0,0,1,20,1,0,5,0],
+["2892","第一金","金融保險","銀行","法規保護",10.5,0,0,1,20,1,0,10,0],
+["2885","元大金","金融保險","券商","網路效應",12.5,0,0,1,12,1,0,5,0],
+["5880","合庫金","金融保險","銀行","法規保護",10.5,0,0,1,20,1,0,5,0],
+["5876","上海商銀","金融保險","銀行","法規保護",12.5,0,0,1,20,1,0,30,0],
+["2801","彰銀","金融保險","銀行","法規保護",8.5,0,0,1,20,1,0,5,0],
+["2809","京城銀","金融保險","銀行","法規保護",10.5,0,0,1,15,1,0,5,0],
+["1301","台塑","特用材料","石化","成本優勢",12.5,18.5,42.5,1,20,1,0,15,0],
+["1303","南亞","特用材料","電子材料","成本優勢",10.5,22.5,38.5,1,20,1,0,30,0],
+["1326","台化","特用材料","石化中下游","成本優勢",10.5,18.5,40.5,1,20,1,0,20,0],
+["6505","台塑化","特用材料","煉油","成本優勢",10.5,12.5,45.5,1,15,1,0,15,0],
+["1723","中碳","特用材料","碳化學品","利基壟斷",18.8,35.2,15.4,1,20,1,0,30,0],
+["6274","台燿","特用材料","高頻基板","轉換成本",14.5,38.5,25.8,1,8,1,1,70,1],
+["1717","長興","特用材料","環氧樹脂","轉換成本",10.5,28.5,32.5,1,10,1,0,40,0],
+["1711","永光","特用材料","顯示化學品","利基壟斷",12.5,35.5,22.5,1,10,1,1,50,1],
+["1712","興農","特用材料","農藥肥料","法規保護",8.5,22.5,32.5,1,10,1,0,10,0],
+["1722","台肥","特用材料","肥料","法規保護",10.5,22.5,28.5,1,15,1,0,10,0],
+["6121","新普","特用材料","電池組","轉換成本",12.5,25.8,32.5,1,8,1,1,85,1],
+["1707","葡萄王","醫療生技","保健食品","品牌溢價",14.8,35.5,18.2,1,15,1,1,15,1],
+["4106","雃博","醫療生技","防褥瘡床墊","轉換成本",12.5,38.5,18.5,1,10,1,1,70,1],
+["1786","科妍","醫療生技","醫美","品牌溢價",14.5,48.5,15.8,1,5,1,1,20,1],
+["4162","智擎","醫療生技","抗癌藥","法規保護",10.5,45.5,18.5,1,5,1,1,80,1],
+["4126","太醫","醫療生技","醫療耗材","轉換成本",10.5,28.5,22.5,1,10,1,1,75,1],
+["4107","邦特","醫療生技","體外循環","轉換成本",10.5,32.5,18.5,1,8,1,1,70,1],
+["4163","鐿鈦","醫療生技","骨科精密","轉換成本",10.5,35.5,18.5,1,5,1,1,75,1],
+["1762","中化生","醫療生技","原料藥CDMO","法規保護",10.5,28.5,28.5,1,10,1,1,40,1],
+["4142","國光生技","醫療生技","疫苗","法規保護",10.5,35.5,18.5,1,5,1,0,10,0],
+["1795","美晶醫","醫療生技","醫療影像","轉換成本",10.5,28.5,22.5,1,5,1,0,30,0],
+["6803","崑鼎","利基產業","廢棄物焚化","法規保護",15.2,42.8,22.5,1,10,1,0,5,0],
+["2630","亞航","利基產業","飛機維修","法規保護",8.5,22.5,42.5,1,8,1,1,15,0],
+["2618","長榮航","利基產業","民航","品牌溢價",10.5,18.5,52.5,1,5,1,1,30,0],
+["2610","華航","利基產業","民航","品牌溢價",8.5,16.5,55.5,1,5,1,1,25,0],
+["2634","漢翔","利基產業","航太製造","法規保護",8.5,28.4,45.2,0,8,1,1,20,1],
+["3010","華立","利基產業","半導體通路","網路效應",10.5,12.5,55.5,1,10,1,1,30,0],
+["3702","大聯大","利基產業","電子通路","網路效應",10.5,5.5,65.5,1,12,1,1,40,0],
+["2603","長榮","利基產業","貨櫃航運","成本優勢",15.5,25.8,35.8,1,5,1,1,30,0],
+];
+
+const FIN_DB = {};
+FIN_ROWS.forEach(r=>{
+  FIN_DB[r[0]]={name:r[1],ind:r[2],sub:r[3],moat:r[4],
+    roe:r[5],gm:r[6],debt:r[7],fcf:r[8],div_years:r[9],
+    insider:r[10],ind_growth:r[11],export_pct:r[12],rd_stable:r[13]};
+});
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+const S = {
+  sheetsId: '',
+  sheetName: 'DailyData',
+  finSheetName: 'FinDB',
+  // All market data from Sheets: {date → {code → {price,yield_,pe,pbr,name}}}
+  allDates: [],      // sorted array of all available dates
+  latestDate: '',
+  marketByDate: {},  // date → {code → mkt}
+  scored: [],        // current scored list
+  watchlist: {},
+  blocked: new Set(),
+  filters: {ind:'全部',moat:''},
+  sliders: {tot:0,gm:0,roe:0,pe:60,yld:0,dbt:80},
+  sortKey:'rank',sortDir:1,
+  q:'',
+  wf:'全部',
+  hp:'d',
+  dr:'latest',  // date range mode
+};
+
+const LS={
+  g:(k,d=null)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}},
+  s:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}},
+};
+
+function loadLS(){
+  S.sheetsInput = LS.g('sheetsInput','');
+  S.sheetsId    = LS.g('sheetsId','');
+  S.sheetsEid   = LS.g('sheetsEid','');
+  S.sheetName  = LS.g('sheetName','DailyData');
+  S.finSheetName=LS.g('finSheetName','FinDB');
+  S.watchlist  = LS.g('wl',{});
+  S.blocked    = new Set(LS.g('blk',[]));
+  // Restore cached market data
+  const cached = LS.g('mktCache',null);
+  if(cached){
+    S.marketByDate = cached.marketByDate||{};
+    S.allDates     = cached.allDates||[];
+    S.latestDate   = cached.latestDate||'';
+    if(S.latestDate) buildScoredFromDate(S.latestDate);
+  }
+  // Extra finDB from sheets
+  const extra = LS.g('extraFin',{});
+  Object.assign(FIN_DB,extra);
+}
+function saveWL(){LS.s('wl',S.watchlist);}
+function saveBlk(){LS.s('blk',[...S.blocked]);}
+function saveMktCache(){
+  LS.s('mktCache',{marketByDate:S.marketByDate,allDates:S.allDates,latestDate:S.latestDate});
+}
+
+// ════════════════════════════════════════════
+// GOOGLE SHEETS FETCH
+// ════════════════════════════════════════════
+// ════ GOOGLE SHEETS URL ENGINE ════
+// Accepts two formats:
+// A) pubhtml URL: https://docs.google.com/spreadsheets/d/e/{EID}/pubhtml
+// B) edit URL:   https://docs.google.com/spreadsheets/d/{ID}/edit
+// C) raw EID or ID string
+
+function extractIds(input){
+  input = (input||'').trim();
+  // Extract EID from pubhtml URL
+  const eidMatch = input.match(/spreadsheets\/d\/e\/([^/\?]+)/);
+  if(eidMatch) return {eid: eidMatch[1], id: null};
+  // Extract regular ID from edit/share URL
+  const idMatch = input.match(/spreadsheets\/d\/([^/\?e][^/\?]*)/);
+  if(idMatch) return {eid: null, id: idMatch[1]};
+  // Raw string - determine by format
+  if(input.startsWith('2PACX')) return {eid: input, id: null};
+  if(input.length > 20) return {eid: null, id: input};
+  return {eid: null, id: null};
+}
+
+function buildUrls(input, sheetName){
+  const {eid, id} = extractIds(input);
+  const enc = encodeURIComponent(sheetName||'');
+  const urls = [];
+
+  if(eid){
+    // Published EID format - most reliable for public access
+    urls.push(`https://docs.google.com/spreadsheets/d/e/${eid}/pub?output=csv&gid=0`);
+    if(sheetName) urls.push(`https://docs.google.com/spreadsheets/d/e/${eid}/pub?output=csv&sheet=${enc}`);
+    // Try common sheet names
+    ['DailyData','工作表1','Sheet1','每日資料','股市分析'].forEach(s=>{
+      if(s!==sheetName) urls.push(`https://docs.google.com/spreadsheets/d/e/${eid}/pub?output=csv&sheet=${encodeURIComponent(s)}`);
+    });
+  }
+
+  if(id){
+    // Regular ID - needs gviz (requires "Anyone with link can view")
+    if(sheetName) urls.push(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${enc}`);
+    urls.push(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv`);
+    // Also try with EID format if user has published - use pub endpoint
+    if(sheetName) urls.push(`https://docs.google.com/spreadsheets/d/${id}/pub?output=csv&sheet=${enc}`);
+    urls.push(`https://docs.google.com/spreadsheets/d/${id}/pub?output=csv&gid=0`);
+  }
+
+  return urls;
+}
+
+function sheetsCSVUrl(sheetId, sheetName){
+  return buildUrls(sheetId, sheetName)[0];
+}
+
+function parseGSheetCSV(text){
+  // Google Sheets CSV: UTF-8, standard format
+  const lines = text.trim().split('\n');
+  const parseL = line => {
+    const res=[]; let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+      else if(c===','&&!inQ){res.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    res.push(cur.trim()); return res;
+  };
+  if(!lines.length) return [];
+  const hdrs = parseL(lines[0]).map(h=>h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).filter(l=>l.trim()).map(l=>{
+    const vals = parseL(l);
+    const obj={};
+    hdrs.forEach((h,i)=>{ obj[h]=(vals[i]||'').replace(/^"|"$/g,'').trim(); });
+    return obj;
+  });
+}
+
+async function syncSheets(){
+  if(!S.sheetsId){ toast('請先設定 Google Sheets ID'); nav('config'); return; }
+  showLoading('從 Google Sheets 讀取資料…');
+
+  const processText = (text, source) => {
+    // Detect if we got an HTML error page instead of CSV
+    if(text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')){
+      throw new Error('收到HTML頁面而非資料，請確認 Sheets 已設為公開或已發布到網路');
+    }
+    const rows = parseGSheetCSV(text);
+    if(!rows.length) throw new Error('工作表是空的，請先用CSV轉換工具貼入資料');
+
+    // Flexible column mapping - handle both Chinese and English headers
+    const byDate = {};
+    let parsed = 0;
+    rows.forEach(r=>{
+      const keys = Object.keys(r);
+      // Try to find date column
+      const date = r['日期']||r['date']||r['Date']||r[keys[0]]||'';
+      // Try to find code column
+      const code = (r['代號']||r['code']||r['Code']||r[keys[1]]||'').toString().trim();
+      if(!date||!code||!/^\d{4}/.test(code)) return;
+      // Normalize date format: accept YYYY/MM/DD or YYYY-MM-DD
+      const normDate = date.toString().trim().replace(/-/g,'/');
+      const price = parseFloat((r['收盤價']||r['price']||r['close']||r[keys[3]]||'0').toString().replace(/,/g,''))||0;
+      const yld   = parseFloat((r['殖利率(%)']||r['殖利率']||r['yield']||r['yield_']||r[keys[4]]||'0').toString())||0;
+      const pe    = parseFloat((r['本益比']||r['pe']||r['PE']||r[keys[5]]||'0').toString())||0;
+      const pbr   = parseFloat((r['股價淨值比']||r['pbr']||r['PBR']||r[keys[6]]||'0').toString())||0;
+      const name  = (r['名稱']||r['name']||r[keys[2]]||'').toString().trim();
+      if(!byDate[normDate]) byDate[normDate]={};
+      byDate[normDate][code]={price,yield_:yld,pe,pbr,name};
+      parsed++;
+    });
+    if(!parsed) throw new Error('資料格式不符，請確認欄位名稱：日期 代號 名稱 收盤價 殖利率(%) 本益比 股價淨值比');
+    return {byDate, parsed};
+  };
+
+  // Try multiple URL strategies
+  const urls = buildUrls(S.sheetsInput||S.sheetsId, S.sheetName);
+  let lastError = null;
+
+  for(let i=0; i<urls.length; i++){
+    const url = urls[i];
+    document.getElementById('loading-txt').textContent = `嘗試連線方式 ${i+1}/${urls.length}…`;
+    try{
+      const res = await fetch(url, {credentials:'omit'});
+      if(!res.ok){
+        lastError = new Error(`HTTP ${res.status}`);
+        continue;
+      }
+      const text = await res.text();
+      const {byDate, parsed} = processText(text, url);
+
+      S.marketByDate = byDate;
+      S.allDates = Object.keys(byDate).sort();
+      S.latestDate = S.allDates[S.allDates.length-1]||'';
+      S.workingUrlIdx = i; // Remember which URL worked
+
+      saveMktCache();
+      buildScoredFromDate(S.latestDate);
+      renderAll();
+      updateStatus(true);
+      const latestCount = Object.keys(byDate[S.latestDate]||{}).length;
+      toast(`✅ 同步成功！${S.allDates.length} 個交易日 · ${latestCount} 檔 · ${S.latestDate}`);
+      hideLoading();
+      return; // Success!
+
+    }catch(e){
+      lastError = e;
+      console.warn(`URL strategy ${i+1} failed:`, e.message);
+    }
+  }
+
+  // All strategies failed
+  hideLoading();
+  updateStatus(false);
+  const errMsg = lastError?.message||'未知錯誤';
+  console.error('All sync strategies failed:', lastError);
+  document.getElementById('conn-status').className='conn-status err';
+  document.getElementById('conn-status').innerHTML = `
+    ❌ 連線失敗：${errMsg}<br>
+    <small>請確認：①Sheets已共用為「知道連結的人可檢視」②工作表名稱為 <b>DailyData</b>（大小寫一致）③已在「檔案→發布到網路」發布 DailyData 工作表</small>
+  `;
+  toast(`❌ 連線失敗，請查看設定頁面的說明`);
+}
+
+// ════════════════════════════════════════════
+// SCORING ENGINE
+// ════════════════════════════════════════════
+const MOAT_PTS={'利基壟斷':20,'轉換成本':17,'品牌溢價':15,'法規保護':14,'網路效應':13,'成本優勢':11};
+const MOAT_CLS={'利基壟斷':'b-tl','轉換成本':'b-pu','品牌溢價':'b-bl','法規保護':'b-ro','網路效應':'b-am','成本優勢':'b-gr'};
+
+function calcGates(fin, mkt){
+  const roe=+fin.roe||0,gm=+fin.gm||0,debt=+fin.debt||100;
+  const fcf=+fin.fcf||0,divy=+fin.div_years||0;
+  const ins=+fin.insider||0,indg=+fin.ind_growth||0;
+  const exp=+fin.export_pct||0,rds=+fin.rd_stable||0;
+  const pe=(mkt&&+mkt.pe>0)?+mkt.pe:0;
+  const y=(mkt&&+mkt.yield_>0)?+mkt.yield_:0;
+
+  const g1=Math.min(20,MOAT_PTS[fin.moat]||8);
+  const g2=Math.min(20,
+    (roe>=15?4:roe>=12?3:roe>=8?1:0)+
+    (gm>=40?4:gm>=20?3:gm>=10?1:0)+
+    (debt<=30?4:debt<=50?3:debt<=70?1:0)+
+    (fcf===1?4:0)+
+    (divy>=10?4:divy>=5?3:divy>=3?2:0));
+  const g3=Math.min(20,(ins===1?14:10)+6);
+  const g4=Math.min(20,
+    (indg===1?7:indg===0?4:0)+
+    (exp>=50?7:exp>=30?5:exp>=10?2:0)+
+    (rds===1?6:2));
+  const g5=Math.min(20,
+    (pe>0?(pe<=15?5:pe<=20?4:pe<=25?2:0):0)+
+    (y>0?(y>=5?5:y>=3?4:y>=1.5?2:0):0)+10);
+  return{g1,g2,g3,g4,g5,total:g1+g2+g3+g4+g5};
+}
+
+function buildScoredFromDate(date){
+  const mkt = S.marketByDate[date]||{};
+  const results=[];
+  Object.entries(FIN_DB).forEach(([code,fin])=>{
+    if(S.blocked.has(code)) return;
+    const m=mkt[code]||null;
+    const {g1,g2,g3,g4,g5,total}=calcGates(fin,m);
+    results.push({
+      code,name:fin.name||(m?.name)||code,
+      ind:fin.ind,moat:fin.moat,
+      roe:fin.roe,gm:fin.gm,debt:fin.debt,
+      g1,g2,g3,g4,g5,total,
+      price:m?.price||0,pe:m?.pe||0,yield_:m?.yield_||0,
+      hasMkt:!!m,isNew:false,
+    });
+  });
+  // New stocks in market but not in finDB
+  Object.entries(mkt).forEach(([code,m])=>{
+    if(FIN_DB[code]||S.blocked.has(code)) return;
+    results.push({
+      code,name:m.name||code,ind:'—',moat:'—',
+      roe:0,gm:0,debt:0,g1:0,g2:0,g3:0,g4:0,g5:0,total:0,
+      price:m.price,pe:m.pe,yield_:m.yield_,
+      hasMkt:true,isNew:true,
+    });
+  });
+  results.sort((a,b)=>b.total-a.total);
+  let r=0; results.forEach(x=>{if(!x.isNew)x.rank=++r;else x.rank=null;});
+  S.scored=results;
+}
+
+function getPrevScore(code){
+  // Find previous date's rank for this code
+  if(S.allDates.length<2) return null;
+  const curIdx=S.allDates.indexOf(S.latestDate);
+  if(curIdx<1) return null;
+  const prevDate=S.allDates[curIdx-1];
+  const prevMkt=S.marketByDate[prevDate]||{};
+  const fin=FIN_DB[code]; if(!fin) return null;
+  const m=prevMkt[code]||null;
+  return calcGates(fin,m).total;
+}
+
+function getPrevRankForCode(code){
+  if(S.allDates.length<2) return null;
+  const curIdx=S.allDates.indexOf(S.latestDate);
+  if(curIdx<1) return null;
+  const prevDate=S.allDates[curIdx-1];
+  const prevMkt=S.marketByDate[prevDate]||{};
+  // rebuild quick rank for prev date
+  const prevScored=[];
+  Object.entries(FIN_DB).forEach(([c,fin])=>{
+    const m=prevMkt[c]||null;
+    const {total}=calcGates(fin,m);
+    prevScored.push({code:c,total});
+  });
+  prevScored.sort((a,b)=>b.total-a.total);
+  const idx=prevScored.findIndex(x=>x.code===code);
+  return idx>=0?idx+1:null;
+}
+
+// ════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════
+function sc(t){return t>=90?'var(--teal)':t>=80?'var(--blue)':t>=70?'var(--gold)':'var(--ink3)';}
+function sb(t){return t>=90?'#0f8f73':t>=80?'#2d6fdb':t>=70?'#b88a00':'#9aa8b8';}
+function gCls(v){return v>=16?'hi':v>=12?'mi':'lo';}
+
+function deltaHtml(curRank,prevRank){
+  if(!prevRank||curRank===null) return '<span class="dl de">—</span>';
+  const d=prevRank-curRank;
+  if(d>0) return `<span class="dl du">↑${d}</span>`;
+  if(d<0) return `<span class="dl dd">↓${Math.abs(d)}</span>`;
+  return '<span class="dl de">━</span>';
+}
+
+function statusSel(code){
+  const v=S.watchlist[code]||'';
+  const cls={'持有中':'sh','觀察中':'sw','考慮買入':'sb2','🔒封鎖':'sk'}[v]||'sn2';
+  return `<select class="ssel ${cls}" onclick="event.stopPropagation()" onchange="setSt('${code}',this.value)">
+    <option value="" ${!v?'selected':''}>— 設定</option>
+    <option value="持有中" ${v==='持有中'?'selected':''}>持有中</option>
+    <option value="觀察中" ${v==='觀察中'?'selected':''}>觀察中</option>
+    <option value="考慮買入" ${v==='考慮買入'?'selected':''}>考慮買入</option>
+    <option value="🔒封鎖" ${v==='🔒封鎖'?'selected':''}>🔒封鎖</option>
+  </select>`;
+}
+
+function stockRow(s){
+  const prevRank=getPrevRankForCode(s.code);
+  const rkCls=s.rank===1?'r1':s.rank===2?'r2':s.rank===3?'r3':'';
+  const moatBdg=s.moat!=='—'?`<span class="bdg ${MOAT_CLS[s.moat]||''}">${s.moat}</span>`:'<span style="font-size:10px;color:var(--ink3)">—</span>';
+  const scoreCell=s.isNew
+    ?'<span style="font-size:10px;color:var(--ink3)">待補充</span>'
+    :`<div class="sbar"><div class="strack"><div class="sfill" style="width:${s.total}%;background:${sb(s.total)}"></div></div><span class="snum" style="color:${sc(s.total)}">${s.total}</span></div>`;
+  return `<tr class="${s.rank&&s.rank<=3?'tr-gold':s.isNew?'tr-new':''}">
+    <td class="rk ${rkCls}">${s.rank??'—'}</td>
+    <td class="cd">${s.code}</td>
+    <td class="nm">${s.name}${s.isNew?'<span class="new-tag">待補充</span>':''}</td>
+    <td style="font-size:11px;color:var(--ink3)">${s.ind}</td>
+    <td>${moatBdg}</td>
+    <td><div class="gs ${gCls(s.g1)}">${s.g1}</div></td>
+    <td><div class="gs ${gCls(s.g2)}">${s.g2}</div></td>
+    <td><div class="gs ${gCls(s.g3)}">${s.g3}</div></td>
+    <td><div class="gs ${gCls(s.g4)}">${s.g4}</div></td>
+    <td><div class="gs ${gCls(s.g5)}">${s.g5}</div></td>
+    <td>${scoreCell}</td>
+    <td class="cd">${s.pe>0?s.pe.toFixed(1)+'x':'—'}</td>
+    <td class="cd">${s.yield_>0?s.yield_.toFixed(2)+'%':'—'}</td>
+    <td class="cd">${s.price>0?'$'+s.price.toLocaleString():'—'}</td>
+    <td>${deltaHtml(s.rank,prevRank)}</td>
+    <td>${statusSel(s.code)}</td>
+  </tr>`;
+}
+
+function getFiltered(){
+  let d=S.scored.filter(s=>!s.isNew&&!S.blocked.has(s.code));
+  if(S.filters.ind!=='全部') d=d.filter(s=>s.ind===S.filters.ind);
+  if(S.filters.moat) d=d.filter(s=>s.moat===S.filters.moat);
+  if(S.q){const q=S.q.toLowerCase();d=d.filter(s=>s.code.includes(q)||s.name.toLowerCase().includes(q));}
+  if(S.sliders.tot>0)  d=d.filter(s=>s.total>=S.sliders.tot);
+  if(S.sliders.gm>0)   d=d.filter(s=>s.gm>=S.sliders.gm);
+  if(S.sliders.roe>0)  d=d.filter(s=>s.roe>=S.sliders.roe);
+  if(S.sliders.pe<60)  d=d.filter(s=>s.pe>0&&s.pe<=S.sliders.pe);
+  if(S.sliders.yld>0)  d=d.filter(s=>s.yield_>0&&s.yield_>=S.sliders.yld);
+  if(S.sliders.dbt<80) d=d.filter(s=>s.debt>0&&s.debt<=S.sliders.dbt);
+  d.sort((a,b)=>{ const av=a[S.sortKey]??0,bv=b[S.sortKey]??0; return (av-bv)*S.sortDir; });
+  return d;
+}
+
+function renderScr(){
+  const d=getFiltered();
+  document.getElementById('scr-body').innerHTML=d.length
+    ?d.map(stockRow).join('')
+    :`<tr><td colspan="16" style="text-align:center;padding:1.5rem;color:var(--ink3)">${S.latestDate?'無符合條件的股票':'請先設定 Sheets 連線並同步'}</td></tr>`;
+  document.getElementById('cnt-chip').textContent=`${d.length} 檔`;
+  document.getElementById('sb-cnt').textContent=S.scored.filter(s=>!s.isNew).length;
+  const newCnt=S.scored.filter(s=>s.isNew).length;
+  document.getElementById('scr-foot').innerHTML=
+    `<span style="background:var(--teal-pale);color:var(--teal);border-radius:12px;padding:2px 8px;font-size:10.5px">✓ ${S.scored.filter(s=>!s.isNew).length} 檔完整評分</span>`+
+    (newCnt?`<span style="background:var(--amber-pale);color:var(--amber);border-radius:12px;padding:2px 8px;font-size:10.5px">⚠ ${newCnt} 檔待補充財務</span>`:'');
+  document.getElementById('scr-desc').textContent=
+    S.latestDate?`${S.latestDate} 資料 · ${S.allDates.length} 個交易日在庫`:'從 Google Sheets 即時讀取';
+}
+
+function renderTop30(){
+  const top30=S.scored.filter(s=>!s.isNew&&!S.blocked.has(s.code)).slice(0,30);
+  document.getElementById('t30-body').innerHTML=top30.length
+    ?top30.map(stockRow).join('')
+    :`<tr><td colspan="16" style="text-align:center;padding:2rem;color:var(--ink3)">請先同步 Sheets</td></tr>`;
+  document.getElementById('t30-desc').textContent=
+    `${S.latestDate||'—'} · 五關總分 · 共 ${top30.length} 檔`;
+}
+
+function renderHome(){
+  const scored=S.scored.filter(s=>!s.isNew);
+  document.getElementById('m-total').textContent=
+    S.allDates.length?Object.values(S.marketByDate[S.latestDate]||{}).length+'':'—';
+  document.getElementById('m-date').textContent=S.latestDate||'—';
+  document.getElementById('m-scored').textContent=scored.length||'—';
+  document.getElementById('m-days').textContent=S.allDates.length||'—';
+  document.getElementById('m-fin').textContent=Object.keys(FIN_DB).length;
+  document.getElementById('home-desc').textContent=
+    S.latestDate?`最新資料：${S.latestDate} · ${S.allDates.length} 個交易日`:'從 Google Sheets 讀取最新資料';
+
+  const top30=scored.slice(0,30);
+  const mc={},ic={};
+  top30.forEach(s=>{mc[s.moat]=(mc[s.moat]||0)+1;ic[s.ind]=(ic[s.ind]||0)+1;});
+  const tot=top30.length||1;
+  const mkDist=(obj,col)=>Object.entries(obj).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+    <div class="drow"><span class="dlbl">${k}</span>
+    <div class="dtrack"><div class="dfill" style="width:${Math.round(v/tot*100)}%;background:${col}"></div></div>
+    <span class="dcnt">${v}</span></div>`).join('');
+  document.getElementById('moat-dist').innerHTML=top30.length
+    ?mkDist(mc,'var(--blue2)'):'<div class="empty"><div class="ei">◆</div><div style="font-size:12px">同步後顯示</div></div>';
+  document.getElementById('ind-dist').innerHTML=top30.length
+    ?mkDist(ic,'var(--teal2)'):'<div class="empty"><div class="ei">◈</div><div style="font-size:12px">同步後顯示</div></div>';
+}
+
+function renderWatchlist(){
+  const codes=Object.keys(S.watchlist).filter(c=>S.watchlist[c]&&S.watchlist[c]!=='🔒封鎖');
+  let d=codes.map(code=>S.scored.find(s=>s.code===code)||
+    {code,name:FIN_DB[code]?.name||code,ind:'—',moat:'—',g1:0,g2:0,g3:0,g4:0,g5:0,total:0,pe:0,yield_:0,price:0,isNew:false,rank:null});
+  if(S.wf!=='全部') d=d.filter(s=>S.watchlist[s.code]===S.wf);
+  document.getElementById('wl-body').innerHTML=d.length
+    ?d.map(s=>`<tr>
+      <td class="cd">${s.code}</td><td class="nm">${s.name}</td>
+      <td style="font-size:11px;color:var(--ink3)">${s.ind}</td>
+      <td>${s.moat!=='—'?`<span class="bdg ${MOAT_CLS[s.moat]||''}">${s.moat}</span>`:'—'}</td>
+      <td><span class="snum" style="color:${sc(s.total)}">${s.total||'—'}</span></td>
+      <td class="cd">${s.pe>0?s.pe.toFixed(1)+'x':'—'}</td>
+      <td class="cd">${s.yield_>0?s.yield_.toFixed(2)+'%':'—'}</td>
+      <td class="cd">${s.price>0?'$'+s.price.toLocaleString():'—'}</td>
+      <td>${statusSel(s.code)}</td>
+      <td><button class="btn btn-out btn-sm" onclick="rmWL('${s.code}')">移除</button></td>
+    </tr>`).join('')
+    :`<tr><td colspan="10" style="text-align:center;padding:1.5rem;color:var(--ink3);font-size:12px">追蹤清單為空</td></tr>`;
+}
+
+function renderWSearch(q){
+  const el=document.getElementById('wr-res');
+  if(!q){el.innerHTML='';return;}
+  const qL=q.toLowerCase();
+  const m=S.scored.filter(s=>!s.isNew&&(s.code.includes(q)||s.name.toLowerCase().includes(qL))).slice(0,10);
+  el.innerHTML=m.map(s=>`<button class="wrc" onclick="quickAdd('${s.code}','${s.name}')">
+    <span class="bdg ${MOAT_CLS[s.moat]||''}">${s.moat}</span>
+    ${s.code} ${s.name}
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:${sc(s.total)};margin-left:3px;">${s.total}分</span>
+  </button>`).join('');
+}
+
+function renderHistory(){
+  const el=document.getElementById('hist-body');
+  if(S.allDates.length<2){
+    el.innerHTML=`<div class="empty"><div class="ei">⟳</div>
+      <div style="font-size:13px">需要至少兩天的資料<br><span style="font-size:11px">目前 Sheets 有 ${S.allDates.length} 個交易日</span></div></div>`;
+    return;
+  }
+  const curDate=S.latestDate;
+  const curMkt=S.marketByDate[curDate]||{};
+  let prevDate=S.allDates[S.allDates.length-2];
+  if(S.hp!=='d'){
+    const curD=new Date(curDate.replace(/\//g,'-')),days=S.hp==='w'?7:30;
+    const target=new Date(curD);target.setDate(target.getDate()-days);
+    let best=S.allDates[0];
+    S.allDates.forEach(d=>{
+      if(Math.abs(new Date(d.replace(/\//g,'-'))-target)<Math.abs(new Date(best.replace(/\//g,'-'))-target))best=d;
+    });
+    prevDate=best;
+  }
+  const prevMkt=S.marketByDate[prevDate]||{};
+
+  // Quick score both dates
+  const scoreDate=(mkt)=>{
+    const arr=[];
+    Object.entries(FIN_DB).forEach(([code,fin])=>{
+      const {total}=calcGates(fin,mkt[code]||null);
+      arr.push({code,name:fin.name,total});
+    });
+    arr.sort((a,b)=>b.total-a.total);
+    arr.forEach((s,i)=>s.rank=i+1);
+    return arr;
+  };
+
+  const curScored=scoreDate(curMkt);
+  const prevScored=scoreDate(prevMkt);
+  const pm={};prevScored.forEach(s=>pm[s.code]=s);
+
+  const rows=curScored.slice(0,30).map(s=>{
+    const p=pm[s.code];
+    const d=p?p.rank-s.rank:null;
+    return`<tr class="${s.rank<=3?'tr-gold':''}">
+      <td class="rk ${s.rank===1?'r1':s.rank===2?'r2':s.rank===3?'r3':''}">${s.rank}</td>
+      <td class="cd">${s.code}</td><td class="nm">${s.name}</td>
+      <td><span class="snum" style="color:${sc(s.total)}">${s.total}</span></td>
+      <td class="cd">${p?p.rank:'新入榜'}</td>
+      <td>${d!=null?(d>0?`<span class="dl du">↑${d}</span>`:d<0?`<span class="dl dd">↓${Math.abs(d)}</span>`:'<span class="dl de">━</span>'):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML=`<div style="font-size:11px;color:var(--ink3);margin-bottom:10px;">
+    比較：${curDate} vs ${prevDate}</div>
+  <div class="tw"><table>
+    <thead><tr><th>排名</th><th>代號</th><th>公司</th><th>當日分</th><th>前期排名</th><th>排名變化</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function renderAll(){
+  renderHome();renderScr();renderTop30();renderWatchlist();renderHistory();
+}
+
+// ════════════════════════════════════════════
+// EXCEL EXPORT
+// ════════════════════════════════════════════
+function doExport(){
+  if(typeof XLSX==='undefined'){toast('Excel庫載入中，稍後再試');return;}
+  const wb=XLSX.utils.book_new();
+  const date=S.latestDate||new Date().toISOString().slice(0,10);
+  const H=['排名','代號','公司名稱','產業','護城河','G1','G2','G3','G4','G5','總分','ROE%','毛利率%','負債比%','本益比','殖利率%','收盤價','狀態'];
+  const toRow=s=>[s.rank??'—',s.code,s.name,s.ind,s.moat,s.g1,s.g2,s.g3,s.g4,s.g5,s.total,
+    s.roe||'',s.gm||'',s.debt||'',s.pe||'',s.yield_||'',s.price||'',S.watchlist[s.code]||''];
+  const scored=S.scored.filter(s=>!s.isNew&&!S.blocked.has(s.code));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([H,...scored.map(toRow)]),'今日篩選結果');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([H,...scored.slice(0,30).map(toRow)]),'前30名');
+  const wlCodes=Object.keys(S.watchlist).filter(c=>S.watchlist[c]&&S.watchlist[c]!=='🔒封鎖');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([H,...wlCodes.map(c=>{
+    const s=scored.find(x=>x.code===c)||{rank:'—',code:c,name:FIN_DB[c]?.name||c,ind:'—',moat:'—',g1:0,g2:0,g3:0,g4:0,g5:0,total:0,roe:0,gm:0,debt:0,pe:0,yield_:0,price:0};
+    return toRow(s);
+  })]),'追蹤清單');
+  XLSX.writeFile(wb,`台股分析_${date.replace(/\//g,'')}.xlsx`);
+  toast(`✅ Excel 已下載：台股分析_${date.replace(/\//g,'')}.xlsx`);
+}
+
+// ════════════════════════════════════════════
+// UI CONTROLS
+// ════════════════════════════════════════════
+function nav(id){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('act'));
+  document.getElementById('pg-'+id).classList.add('act');
+  document.querySelectorAll('.bn').forEach(b=>b.classList.remove('act'));
+  document.querySelectorAll('.bn').forEach(b=>{if(b.getAttribute('onclick')?.includes("'"+id+"'"))b.classList.add('act');});
+  document.querySelectorAll('.si').forEach(b=>b.classList.remove('act'));
+  const m={home:0,screener:1,top30:2,watchlist:3,history:4,config:5};
+  document.querySelectorAll('.si')[m[id]]?.classList.add('act');
+  if(id==='screener') renderScr();
+  if(id==='top30') renderTop30();
+  if(id==='watchlist') renderWatchlist();
+  if(id==='history') renderHistory();
+  if(id==='config'){
+    document.getElementById('cfg-id').value=S.sheetsInput||S.sheetsId;
+    document.getElementById('cfg-sheet').value=S.sheetName;
+    document.getElementById('cfg-fin').value=S.finSheetName;
+  }
+}
+
+function onSl(key,val,isMax=false){
+  S.sliders[key]=parseFloat(val);
+  const max=parseFloat(document.getElementById('s-'+key).max);
+  let lbl;
+  if(isMax&&parseFloat(val)>=max) lbl='不限';
+  else lbl=val>0?(key==='tot'?val+'分以上':val+(key==='pe'?'x以下':key==='dbt'?'%以下':'%以上')):'不限';
+  document.getElementById('v-'+key).textContent=lbl;
+  renderScr();
+}
+
+function resetSliders(){
+  S.sliders={tot:0,gm:0,roe:0,pe:60,yld:0,dbt:80};
+  [['tot','0'],['gm','0'],['roe','0'],['pe','60'],['yld','0'],['dbt','80']].forEach(([k,v])=>{
+    const e=document.getElementById('s-'+k);if(e)e.value=v;
+    const ve=document.getElementById('v-'+k);if(ve)ve.textContent='不限';
+  });
+  renderScr();
+}
+
+function setFB(btn,type,val){
+  document.querySelectorAll(`.fb[data-${type}]`).forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act'); S.filters[type]=val; renderScr();
+}
+
+function setInd(ind){S.filters.ind=ind;S.filters.moat='';nav('screener');}
+function setMoat(moat){S.filters.moat=moat;S.filters.ind='全部';nav('screener');
+  document.querySelectorAll('.fb[data-ind]').forEach(b=>b.classList.toggle('act',b.dataset.ind==='全部'));}
+
+function sortBy(key){
+  if(S.sortKey===key)S.sortDir*=-1;else{S.sortKey=key;S.sortDir=-1;} renderScr();
+}
+
+function setDR(btn,mode){
+  S.dr=mode;
+  document.querySelectorAll('[data-dr]').forEach(b=>b.classList.remove('act'));
+  if(btn) btn.classList.add('act');
+  if(mode==='latest') buildScoredFromDate(S.latestDate);
+  // week/month/custom would average or pick a date range - simplified to latest for now
+  renderScr(); renderTop30();
+}
+
+function setSt(code,val){
+  if(val==='🔒封鎖'){S.blocked.add(code);saveBlk();}
+  else S.blocked.delete(code);
+  if(!val) delete S.watchlist[code]; else S.watchlist[code]=val;
+  saveWL();
+  if(val==='🔒封鎖'){buildScoredFromDate(S.latestDate);renderAll();}
+  else renderWatchlist();
+}
+
+function setWF(btn,val){
+  document.querySelectorAll('[data-wf]').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act'); S.wf=val; renderWatchlist();
+}
+
+function setHP(btn,p){
+  document.querySelectorAll('[data-hp]').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act'); S.hp=p; renderHistory();
+}
+
+function quickAdd(code,name){
+  S.watchlist[code]='觀察中'; saveWL();
+  document.getElementById('wl-srch').value='';
+  document.getElementById('wr-res').innerHTML='';
+  renderWatchlist(); toast(`✅ ${name} 加入觀察清單`);
+}
+
+function rmWL(code){delete S.watchlist[code];saveWL();renderWatchlist();}
+
+function saveConfig(){
+  const id=document.getElementById('cfg-id').value.trim();
+  if(!id){toast('請填入 Sheets ID');return;}
+  S.sheetsId=id;
+  S.sheetName=document.getElementById('cfg-sheet').value||'DailyData';
+  S.finSheetName=document.getElementById('cfg-fin').value||'FinDB';
+  LS.s('sheetsId',S.sheetsId);
+  LS.s('sheetName',S.sheetName);
+  LS.s('finSheetName',S.finSheetName);
+  toast('✅ 設定已儲存，開始連線…');
+  syncSheets();
+}
+
+function clearAll(){
+  if(!confirm('確定清除所有快取資料？')) return;
+  localStorage.clear();
+  S.marketByDate={};S.allDates=[];S.latestDate='';S.scored=[];
+  renderAll();updateStatus(false);toast('已清除');
+}
+
+function showLoading(txt){
+  document.getElementById('loading-txt').textContent=txt||'載入中…';
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading(){document.getElementById('loading').classList.remove('show');}
+
+function updateStatus(ok){
+  const dot=document.getElementById('dot');
+  const stat=document.getElementById('stat-txt');
+  if(!S.sheetsId){
+    dot.className='dot warn';stat.textContent='未設定 Sheets';
+    document.getElementById('conn-status').textContent='';return;
+  }
+  if(ok===true){
+    dot.className='dot on';
+    stat.textContent=`${S.latestDate} · ${S.allDates.length}天`;
+    document.getElementById('conn-status').className='conn-status ok';
+    document.getElementById('conn-status').textContent=`✅ 連線成功，${S.allDates.length} 個交易日`;
+  }else if(ok===false){
+    dot.className='dot err';stat.textContent='連線失敗';
+    document.getElementById('conn-status').className='conn-status err';
+    document.getElementById('conn-status').textContent='❌ 連線失敗，請確認 Sheets ID 和公開設定';
+  }else{
+    dot.className='dot on';
+    stat.textContent=S.latestDate?`${S.latestDate} · ${S.allDates.length}天`:'已設定';
+  }
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ════ TEST / DIAGNOSE ════
+async function testSheets(){
+  const id = document.getElementById('cfg-id').value.trim() || S.sheetsId;
+  const sheet = document.getElementById('cfg-sheet').value.trim() || S.sheetName;
+  if(!id){ toast('請先填入 Sheets ID'); return; }
+
+  const statusEl = document.getElementById('conn-status');
+  statusEl.className='conn-status';
+  statusEl.innerHTML='🔍 診斷中…';
+
+  const urls = buildUrls(S.sheetsInput||id, sheet);
+  let report = '<strong>連線診斷報告：</strong><br>';
+
+  for(let i=0;i<urls.length;i++){
+    try{
+      const res = await fetch(urls[i], {credentials:'omit'});
+      const text = await res.text();
+      const isHtml = text.trim().startsWith('<');
+      const lineCount = text.split('\n').length;
+      if(res.ok && !isHtml && lineCount > 1){
+        report += `✅ 方式${i+1} 成功：${lineCount} 行資料<br>`;
+        report += `<span style="font-size:10px;color:var(--teal)">→ ${urls[i].slice(0,60)}…</span><br>`;
+      } else if(isHtml){
+        report += `❌ 方式${i+1}：收到HTML（Sheets未公開或未發布）<br>`;
+      } else {
+        report += `⚠️ 方式${i+1}：HTTP ${res.status}<br>`;
+      }
+    }catch(e){
+      report += `❌ 方式${i+1}：${e.message.slice(0,50)}<br>`;
+    }
+  }
+
+  statusEl.innerHTML = report;
+
+  // Also check sheet name
+  report += `<br><strong>工作表名稱檢查：</strong>「${sheet}」<br>`;
+  report += `請確認 Sheets 裡的工作表標籤名稱完全一致（包含大小寫）`;
+  statusEl.innerHTML = report;
+}
+
+function autofillKnown(){
+  // Pre-fill the known working pubhtml URL from this conversation
+  const pubhtml = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_ZtpdLHwtD25nso9SZihnZbcByzKdK2mVrZqc-_HMVJ7762DqeO3vlkwSVgXa6NDzcTaEVsrfFlKJ/pubhtml';
+  document.getElementById('cfg-id').value = pubhtml;
+  toast('已填入你的 Sheets 連結，請再確認工作表名稱後按「儲存並連線」');
+}
+
+// INIT
+loadLS();
+updateStatus();
+renderAll();
+if(S.sheetsId && !S.latestDate) syncSheets();
+else if(S.latestDate) toast(`📂 已載入快取：${S.latestDate} · ${S.allDates.length} 個交易日`);
+</script>
+</body>
+</html>
